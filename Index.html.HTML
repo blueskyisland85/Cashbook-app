@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CashBook Clone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+        .pt-safe-top { padding-top: env(safe-area-inset-top); }
+        .pb-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .slide-up { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 h-screen w-screen overflow-hidden flex flex-col font-sans">
+
+    <!-- === VIEW: DASHBOARD === -->
+    <div id="view-dashboard" class="view-section h-full flex flex-col">
+        
+        <!-- Header -->
+        <div class="bg-blue-700 text-white pt-safe-top pb-6 px-4 rounded-b-[2.5rem] shadow-lg relative z-10 shrink-0">
+            <div class="flex justify-between items-center py-4">
+                <button onclick="app.switchView('settings')" class="flex items-center gap-2 active:opacity-80">
+                    <i data-lucide="book" class="w-5 h-5 text-blue-200"></i>
+                    <span class="font-semibold text-lg" id="display-book-name">My Book</span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-blue-300"></i>
+                </button>
+                <div class="flex gap-3">
+                    <button onclick="app.downloadReport()" class="p-2 rounded-full hover:bg-blue-600"><i data-lucide="download" class="w-5 h-5 text-blue-200"></i></button>
+                    <button onclick="app.switchView('settings')" class="p-2 rounded-full hover:bg-blue-600"><i data-lucide="settings" class="w-5 h-5 text-blue-200"></i></button>
+                </div>
+            </div>
+
+            <!-- Net Balance -->
+            <div class="text-center mt-2 pb-8">
+                <p class="text-blue-200 text-sm font-medium">Net Balance</p>
+                <h1 class="text-4xl font-bold mt-1" id="display-balance">₹0</h1>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="px-4 -mt-10 mb-2 z-20 flex gap-4 shrink-0">
+            <div class="bg-white p-4 rounded-xl flex-1 shadow-md flex flex-col items-center justify-center h-24">
+                <span class="text-green-600 text-xs font-bold uppercase mb-1">Total In (+)</span>
+                <span class="text-green-700 text-xl font-bold" id="display-in">₹0</span>
+            </div>
+            <div class="bg-white p-4 rounded-xl flex-1 shadow-md flex flex-col items-center justify-center h-24">
+                <span class="text-red-600 text-xs font-bold uppercase mb-1">Total Out (-)</span>
+                <span class="text-red-700 text-xl font-bold" id="display-out">₹0</span>
+            </div>
+        </div>
+
+        <!-- Transaction List -->
+        <div class="flex-1 overflow-y-auto px-4 pb-24 pt-2 hide-scrollbar relative">
+            <div class="flex justify-between items-center mb-3 sticky top-0 bg-gray-100 py-2 z-10">
+                <h3 class="font-bold text-gray-700 text-sm uppercase tracking-wider">Transactions</h3>
+                <button onclick="app.fetchData()" class="p-2 bg-white rounded-full shadow-sm text-gray-600 hover:text-blue-600">
+                    <i data-lucide="refresh-cw" class="w-4 h-4" id="refresh-icon"></i>
+                </button>
+            </div>
+
+            <div id="transaction-list" class="space-y-3">
+                <!-- JS will populate this -->
+                <div class="text-center py-10 opacity-50">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Bottom Buttons -->
+        <div class="fixed bottom-6 w-full px-6 flex justify-between gap-4 pointer-events-none z-30 pb-safe-bottom">
+            <button onclick="app.openAddModal('IN')" class="flex-1 bg-green-600 text-white py-3.5 rounded-2xl shadow-xl shadow-green-600/30 font-bold flex items-center justify-center gap-2 pointer-events-auto active:scale-95 transition">
+                <i data-lucide="plus" class="w-6 h-6"></i> Cash In
+            </button>
+            <button onclick="app.openAddModal('OUT')" class="flex-1 bg-red-600 text-white py-3.5 rounded-2xl shadow-xl shadow-red-600/30 font-bold flex items-center justify-center gap-2 pointer-events-auto active:scale-95 transition">
+                <i data-lucide="minus" class="w-6 h-6"></i> Cash Out
+            </button>
+        </div>
+    </div>
+
+    <!-- === VIEW: SETTINGS === -->
+    <div id="view-settings" class="view-section hidden h-full bg-gray-50 p-6 overflow-y-auto">
+        <div class="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-sm">
+            <div class="flex items-center gap-3 mb-6 text-blue-700 border-b pb-4">
+                <i data-lucide="settings" class="w-6 h-6"></i>
+                <h1 class="text-xl font-bold">App Settings</h1>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Google Web App URL</label>
+                    <textarea id="setting-url" class="w-full p-3 border rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" rows="3" placeholder="https://script.google.com/macros/s/.../exec"></textarea>
+                    <p class="text-[10px] text-gray-400 mt-1">Paste the Deployment URL from your Google Sheet Script here.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Your Name / User ID</label>
+                    <input type="text" id="setting-user" class="w-full p-3 border rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g., John Doe">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Book Name</label>
+                    <input type="text" id="setting-book" class="w-full p-3 border rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g., Shop 1">
+                    <p class="text-[10px] text-gray-400 mt-1">Changing this switches the view to that book's data.</p>
+                </div>
+
+                <button onclick="app.saveSettings()" class="w-full bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg mt-4 active:scale-95 transition">
+                    Save & Connect
+                </button>
+
+                <button onclick="app.switchView('dashboard')" class="w-full bg-gray-200 text-gray-700 py-3.5 rounded-xl font-bold mt-2">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- === VIEW: ADD TRANSACTION (MODAL) === -->
+    <div id="view-add" class="fixed inset-0 z-50 hidden flex flex-col bg-gray-100">
+        <div class="bg-white p-4 flex items-center shadow-sm pt-safe-top">
+            <button onclick="app.switchView('dashboard')" class="p-2 mr-2 rounded-full bg-gray-100">
+                <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
+            </button>
+            <h1 class="text-lg font-bold" id="add-title">Add Entry</h1>
+        </div>
+
+        <form onsubmit="app.submitTransaction(event)" class="p-6 space-y-5 flex-1 overflow-y-auto">
+            <input type="hidden" id="inp-type">
+            
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Amount</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-3.5 text-gray-400 font-bold text-lg">₹</span>
+                    <input type="number" id="inp-amount" required step="0.01" class="w-full pl-10 pr-4 py-3 text-2xl font-bold border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Remark</label>
+                <input type="text" id="inp-remark" required class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Description...">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Category</label>
+                    <select id="inp-category" class="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option>General</option>
+                        <option>Food</option>
+                        <option>Travel</option>
+                        <option>Salary</option>
+                        <option>Bills</option>
+                        <option>Shopping</option>
+                        <option>Rent</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Mode</label>
+                    <select id="inp-mode" class="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option>Cash</option>
+                        <option>Online/UPI</option>
+                        <option>Bank</option>
+                        <option>Cheque</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                <input type="date" id="inp-date" class="w-full p-3 border rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <button type="submit" id="btn-save" class="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg mt-8 active:scale-95 transition">
+                Save Entry
+            </button>
+        </form>
+    </div>
+
+<script>
+const app = {
+    url: localStorage.getItem('cashbook_api') || '',
+    user: localStorage.getItem('cashbook_user') || 'Admin',
+    book: localStorage.getItem('cashbook_book') || 'Personal',
+    transactions: [],
+
+    init() {
+        lucide.createIcons();
+        // Set initial inputs
+        document.getElementById('setting-url').value = this.url;
+        document.getElementById('setting-user').value = this.user;
+        document.getElementById('setting-book').value = this.book;
+        document.getElementById('display-book-name').innerText = this.book;
+        
+        if (!this.url) {
+            this.switchView('settings');
+        } else {
+            this.fetchData();
+        }
+    },
+
+    switchView(viewId) {
+        document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+        document.getElementById('view-add').classList.add('hidden');
+        
+        if (viewId === 'add') {
+            document.getElementById('view-add').classList.remove('hidden');
+            document.getElementById('view-add').classList.add('slide-up');
+        } else {
+            document.getElementById(view-${viewId}).classList.remove('hidden');
+        }
+        lucide.createIcons();
+    },
+
+    saveSettings() {
+        const url = document.getElementById('setting-url').value.trim();
+        const user = document.getElementById('setting-user').value.trim();
+        const book = document.getElementById('setting-book').value.trim();
+
+        if (!url) return alert("Please enter the Web App URL");
+
+        this.url = url;
+        this.user = user || 'Admin';
+        this.book = book || 'Main';
+
+        localStorage.setItem('cashbook_api', this.url);
+        localStorage.setItem('cashbook_user', this.user);
+        localStorage.setItem('cashbook_book', this.book);
+
+        document.getElementById('display-book-name').innerText = this.book;
+        this.switchView('dashboard');
+        this.fetchData();
+    },
+
+    async fetchData() {
+        if (!this.url) return;
+        
+        const listEl = document.getElementById('transaction-list');
+        const icon = document.getElementById('refresh-icon');
+        
+        icon.classList.add('animate-spin');
+        listEl.style.opacity = '0.5';
+
+        try {
+            const res = await fetch(${this.url}?action=get_transactions);
+            const json = await res.json();
+            
+            if (json.status === 'success') {
+                // Filter for current book locally
+                this.transactions = json.data.filter(t => t.BookName === this.book);
+                // Sort newest first
+                this.transactions.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+                this.renderDashboard();
+            } else {
+                alert("Error: " + json.error);
+            }
+        } catch (e) {
+            console.error(e);
+            // alert("Network Error. Check URL.");
+        } finally {
+            icon.classList.remove('animate-spin');
+            listEl.style.opacity = '1';
+        }
+    },
+
+    renderDashboard() {
+        const listEl = document.getElementById('transaction-list');
+        listEl.innerHTML = '';
+
+        let totalIn = 0;
+        let totalOut = 0;
+
+        if (this.transactions.length === 0) {
+            listEl.innerHTML = `
+                <div class="text-center py-12 flex flex-col items-center opacity-60">
+                    <i data-lucide="wallet" class="w-12 h-12 text-gray-300 mb-2"></i>
+                    <p class="text-gray-500">No entries in "${this.book}"</p>
+                </div>`;
+            lucide.createIcons();
+        }
+
+        this.transactions.forEach(t => {
+            const amt = parseFloat(t.Amount) || 0;
+            if (t.Type === 'IN') totalIn += amt; else totalOut += amt;
+
+            const dateObj = new Date(t.Date);
+            const dateStr = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+            const el = document.createElement('div');
+            el.className = 'bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center active:bg-gray-50';
+            el.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center ${t.Type === 'IN' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">
+                        <i data-lucide="${t.Type === 'IN' ? 'plus' : 'minus'}" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-gray-800 leading-tight">${t.Remark}</p>
+                        <div class="flex gap-2 text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-wide">
+                            <span>${dateStr}</span> • <span>${t.Category}</span> • <span>${t.User}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="font-bold text-lg ${t.Type === 'IN' ? 'text-green-600' : 'text-red-600'}">
+                        ${t.Type === 'IN' ? '+' : '-'} ₹${amt}
+                    </p>
+                    <button onclick="app.deleteEntry('${t.ID}')" class="text-[10px] text-red-300 hover:text-red-500 p-1">DELETE</button>
+                </div>
+            `;
+            listEl.appendChild(el);
+        });
+
+        document.getElementById('display-in').innerText = ₹${totalIn.toLocaleString()};
+        document.getElementById('display-out').innerText = ₹${totalOut.toLocaleString()};
+        document.getElementById('display-balance').innerText = ₹${(totalIn - totalOut).toLocaleString()};
+        
+        lucide.createIcons();
+    },
+
+    openAddModal(type) {
+        document.getElementById('inp-type').value = type;
+        document.getElementById('add-title').innerText = type === 'IN' ? 'Cash In (+)' : 'Cash Out (-)';
+        document.getElementById('add-title').className = type === 'IN' ? 'text-xl font-bold text-green-600' : 'text-xl font-bold text-red-600';
+        
+        const btn = document.getElementById('btn-save');
+        btn.className = w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg mt-8 active:scale-95 transition ${type === 'IN' ? 'bg-green-600' : 'bg-red-600'};
+        
+        document.getElementById('inp-date').valueAsDate = new Date();
+        document.getElementById('inp-amount').value = '';
+        document.getElementById('inp-remark').value = '';
+        
+        this.switchView('add');
+    },
+
+    async submitTransaction(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save');
+        const originalText = btn.innerText;
+        btn.innerText = "Saving...";
+        btn.disabled = true;
+
+        const payload = {
+            action: 'add_transaction',
+            id: Date.now().toString(),
+            date: document.getElementById('inp-date').value,
+            type: document.getElementById('inp-type').value,
+            amount: document.getElementById('inp-amount').value,
+            remark: document.getElementById('inp-remark').value,
+            category: document.getElementById('inp-category').value,
+            mode: document.getElementById('inp-mode').value,
+            book_name: this.book,
+            user: this.user
+        };
+
+        try {
+            await fetch(this.url, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            // Optimistic Update (Update UI immediately)
+            this.transactions.unshift({
+                ID: payload.id,
+                Date: payload.date,
+                Type: payload.type,
+                Amount: payload.amount,
+                Remark: payload.remark,
+                Category: payload.category,
+                Mode: payload.mode,
+                BookName: payload.book_name,
+                User: payload.user
+            });
+            
+            this.renderDashboard();
+            this.switchView('dashboard');
+            
+            // Sync in background after a delay
+            setTimeout(() => this.fetchData(), 1500);
+
+        } catch (err) {
+            alert("Error saving entry.");
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    },
+
+    async deleteEntry(id) {
+        if (!confirm("Delete this entry permanently?")) return;
+        
+        // Optimistic remove
+        this.transactions = this.transactions.filter(t => t.ID !== id);
+        this.renderDashboard();
+
+        try {
+            await fetch(${this.url}?action=delete_transaction&id=${id});
+        } catch (e) {
+            alert("Failed to delete on server");
+        }
+    },
+
+    downloadReport() {
+        let csvContent = "data:text/csv;charset=utf-8,ID,Date,Type,Amount,Remark,Category,Mode,User\n";
+        this.transactions.forEach(row => {
+            const r = ${row.ID},${row.Date},${row.Type},${row.Amount},${row.Remark},${row.Category},${row.Mode},${row.User};
+            csvContent += r + "\n";
+        });
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", CashBook_${this.book}_Report.csv);
+        document.body.appendChild(link);
+        link.click();
+    }
+};
+
+window.addEventListener('DOMContentLoaded', () => app.init());
+</script>
+</body>
+</html>
