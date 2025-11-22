@@ -179,7 +179,7 @@
 
 <script>
 const app = {
-    url: localStorage.getItem('cashbook_api') || '',
+    url: localStorage.getItem('cashbook_api') || 'https://script.google.com/macros/s/AKfycbyAiQ6yiAVisxHX1WdJdTX9Iv0gTYEWHssTo_hL57Yfym8f465SJn3KnyYIZCsBHTR3/exec',
     user: localStorage.getItem('cashbook_user') || 'Admin',
     book: localStorage.getItem('cashbook_book') || 'Personal',
     transactions: [],
@@ -420,4 +420,5 @@ const app = {
 window.addEventListener('DOMContentLoaded', () => app.init());
 </script>
 </body>
+
 </html>
